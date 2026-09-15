@@ -1,9 +1,20 @@
 from datetime import UTC, datetime, timedelta
 
+import httpx
 import pytest
+from openai import OpenAI
 
+from app.config import Settings
 from app.macro import regime
-from app.research import Article, ResearchBatch, accept_articles, evidence_summary, store_articles
+from app.research import (
+    Article,
+    ResearchBatch,
+    ResearchClient,
+    accept_articles,
+    ensure_openai_json_parser,
+    evidence_summary,
+    store_articles,
+)
 
 NOW = datetime(2026, 9, 15, tzinfo=UTC)
 
@@ -63,3 +74,58 @@ def test_macro_missing_stale_and_region_separation():
     assert regime(rows, NOW)["inflation_regime"] == "DISINFLATIONARY"
     assert regime(rows, NOW, "US")["inflation_regime"] == "UNCERTAIN"
     assert regime(rows, NOW + timedelta(days=500))["inflation_regime"] == "UNCERTAIN"
+
+
+def test_stdlib_json_fallback_replaces_unloadable_jiter(monkeypatch):
+    import builtins
+    import sys
+
+    real_import = builtins.__import__
+
+    def broken_jiter(name, *args, **kwargs):
+        if name == "jiter":
+            raise ImportError("DLL load failed")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.delitem(sys.modules, "jiter", raising=False)
+    monkeypatch.setattr(builtins, "__import__", broken_jiter)
+    assert ensure_openai_json_parser() is True
+    assert sys.modules["jiter"].from_json(b'{"ok":true}') == {"ok": True}
+    monkeypatch.setattr(builtins, "__import__", real_import)
+    assert ensure_openai_json_parser() is True
+
+    payload = {
+        "id": "resp_test",
+        "object": "response",
+        "created_at": 0,
+        "model": "test-model",
+        "status": "completed",
+        "output": [
+            {
+                "id": "msg_test",
+                "type": "message",
+                "role": "assistant",
+                "status": "completed",
+                "content": [
+                    {
+                        "type": "output_text",
+                        "text": '{"articles":[]}',
+                        "annotations": [],
+                    }
+                ],
+            }
+        ],
+        "usage": {"input_tokens": 1, "output_tokens": 1, "total_tokens": 2},
+    }
+
+    def handler(request):
+        return httpx.Response(200, json=payload, request=request)
+
+    http_client = httpx.Client(transport=httpx.MockTransport(handler))
+    client = OpenAI(
+        api_key="test", base_url="https://example.invalid/v1", http_client=http_client
+    )
+    researcher = ResearchClient(Settings(openai_api_key="test"), client=client)
+    parsed, _ = researcher.parse("test-model", ResearchBatch, "test")
+    assert parsed == ResearchBatch(articles=[])
+    http_client.close()

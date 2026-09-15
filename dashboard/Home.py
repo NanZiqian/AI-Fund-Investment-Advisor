@@ -135,6 +135,11 @@ def llm_error_message(health):
         "APITimeoutError": "The LLM API timed out. Check the endpoint and try again.",
         "RateLimitError": "The LLM API rate limit or account quota was reached.",
         "InternalServerError": "The LLM provider returned a server error. Try again later.",
+        "ImportError": (
+            "The local LLM client could not load a Python dependency. Restart the dashboard "
+            "after updating this project; the bundled standard-library JSON fallback should "
+            "handle an incompatible jiter DLL without installing another package."
+        ),
         "OpenAIError": "The LLM client configuration is invalid. Check the key and API URL.",
         "TypeError": "The LLM client configuration or structured response is invalid.",
         "ValueError": "The LLM client configuration or structured response is invalid.",

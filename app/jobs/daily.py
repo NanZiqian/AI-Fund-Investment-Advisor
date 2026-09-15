@@ -38,6 +38,7 @@ LLM_REQUEST_ERRORS = {
     "AuthenticationError",
     "BadRequestError",
     "InternalServerError",
+    "ImportError",
     "NotFoundError",
     "OpenAIError",
     "PermissionDeniedError",
@@ -480,6 +481,11 @@ def run_daily(
             "web_searches": researcher.searches if researcher else 0,
             "input_tokens": researcher.input_tokens if researcher else 0,
             "output_tokens": researcher.output_tokens if researcher else 0,
+            "llm_json_parser": (
+                "stdlib_fallback"
+                if researcher and getattr(researcher, "using_json_fallback", False)
+                else "native"
+            ),
             "estimated_llm_cost_usd": None,
             "timings": timings,
             "duration_seconds": round(time.monotonic() - start, 3),

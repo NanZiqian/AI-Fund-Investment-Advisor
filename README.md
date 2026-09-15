@@ -105,6 +105,8 @@ The **Run Daily Analysis** panel never displays a saved key. A blank API-key fie
 
 Before an enabled LLM run starts, the dashboard blocks missing API keys or required model IDs. After the run it reports authentication, permission, endpoint/model-not-found, unsupported-request, connection, timeout, rate-limit, and provider-server errors with an actionable message. A hard API failure stops additional LLM attempts for that run while retaining the quantitative result.
 
+On Windows, some Conda environments can contain a `jiter` native DLL that the operating system cannot load. The application automatically falls back to Python's standard JSON parser for its non-streaming LLM calls, so this condition does not require another package installation. The run telemetry records `llm_json_parser: stdlib_fallback` when that compatibility path is active.
+
 The implementation uses the OpenAI Responses API with structured outputs and Web Search. See the official [Responses API reference](https://developers.openai.com/api/reference/resources/responses/methods/create) and [Web Search guide](https://developers.openai.com/api/docs/guides/tools-web-search).
 
 ### Configuration reference

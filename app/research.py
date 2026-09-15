@@ -1,6 +1,8 @@
 import hashlib
 import json
+import sys
 from datetime import timedelta
+from types import ModuleType
 from urllib.parse import urlparse
 
 from openai import OpenAI
@@ -29,6 +31,27 @@ class ResearchBatch(StrictModel):
     articles: list[Article] = Field(max_length=30)
 
 
+def ensure_openai_json_parser():
+    """Use stdlib JSON when jiter's optional native module cannot load."""
+    try:
+        import jiter
+
+        return bool(getattr(jiter, "__fundscope_stdlib__", False))
+    except (ImportError, OSError):
+        fallback = ModuleType("jiter")
+
+        def from_json(data, *, partial_mode=False, **_kwargs):
+            del partial_mode
+            if isinstance(data, bytes):
+                data = data.decode("utf-8")
+            return json.loads(data)
+
+        fallback.from_json = from_json
+        fallback.__fundscope_stdlib__ = True
+        sys.modules["jiter"] = fallback
+        return True
+
+
 def source_urls(response):
     result = set()
     raw = response.model_dump() if hasattr(response, "model_dump") else response
@@ -47,6 +70,7 @@ def source_urls(response):
 class ResearchClient:
     def __init__(self, settings, client=None):
         self.settings = settings
+        self.using_json_fallback = ensure_openai_json_parser()
         client_options = {
             "api_key": settings.openai_api_key.get_secret_value(),
             "timeout": 45,

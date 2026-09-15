@@ -1,13 +1,13 @@
 .PHONY: setup test migrate daily dashboard api
 setup:
-	uv sync --extra dev
+	python -m pip install -e ".[dev]"
 migrate:
-	uv run alembic upgrade head
+	python -m alembic upgrade head
 test:
-	uv run pytest
+	python -m pytest
 daily:
-	uv run python -m app.jobs.daily
+	python -m app.jobs.daily
 dashboard:
-	uv run streamlit run dashboard/Home.py --server.address 127.0.0.1
+	python -m streamlit run dashboard/Home.py --server.address 127.0.0.1
 api:
-	uv run uvicorn app.main:app --host 127.0.0.1 --port 8000
+	python -m uvicorn app.main:app --host 127.0.0.1 --port 8000

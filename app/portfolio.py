@@ -74,7 +74,7 @@ def portfolio_view(session):
             "total": None,
             "as_of": None,
             "cash_ratio": None,
-            "warnings": ["尚未导入持仓"],
+            "warnings": ["No portfolio has been imported"],
         }
     rows = []
     for p, i in session.execute(
@@ -108,9 +108,13 @@ def portfolio_view(session):
         row["invested_weight"] = str(Decimal(row["market_value"]) / invested) if invested else "0"
     warnings = []
     if account.cash is None:
-        warnings.append("现金未知：总资产、现金比率及加仓预算不可计算")
+        warnings.append(
+            "Cash is unknown: total assets, cash ratio, and buy budget cannot be calculated"
+        )
     if any(not p["confirmed"] for p in rows):
-        warnings.append("存在待确认持仓；截图金额不是实时资产估值")
+        warnings.append(
+            "Some holdings are unconfirmed; screenshot amounts are not current valuations"
+        )
     return {
         "positions": rows,
         "invested": str(money(invested)),

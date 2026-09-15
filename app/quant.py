@@ -84,18 +84,21 @@ def metrics(bars, risk_free=0.02, risk_free_source="config:fallback"):
 def portfolio_risk(histories, weights):
     """Aligned observations; static current weights proxy, NOT realized portfolio P&L."""
     if not weights or any(s not in histories for s in weights):
-        return {"status": "INSUFFICIENT_DATA", "reason": "缺少持仓行情或资产权重"}
+        return {
+            "status": "INSUFFICIENT_DATA",
+            "reason": "Missing holding prices or portfolio weights",
+        }
     series = {}
     for symbol in weights:
         bars = histories[symbol]
         if any(b.total_return is None for b in bars):
-            return {"status": "INSUFFICIENT_DATA", "reason": "缺少复权数据"}
+            return {"status": "INSUFFICIENT_DATA", "reason": "Missing total-return data"}
         series[symbol] = pd.Series({b.date: float(b.total_return) for b in bars}, dtype=float)
     aligned = pd.DataFrame(series).sort_index()
     # Calculate returns before intersection to avoid treating multi-day moves as daily returns.
     returns = aligned.pct_change(fill_method=None).dropna().tail(252)
     if len(returns) < 60:
-        return {"status": "INSUFFICIENT_DATA", "reason": "同步净值观测不足 60 期"}
+        return {"status": "INSUFFICIENT_DATA", "reason": "Fewer than 60 aligned NAV observations"}
     w = np.array([float(weights[s]) for s in returns.columns])
     covariance = returns.cov().to_numpy() * 252
     variance = float(w @ covariance @ w)
@@ -112,7 +115,7 @@ def portfolio_risk(histories, weights):
     ]
     return {
         "status": "OK",
-        "method": "当前权重恒定再平衡代理；现金收益按零计",
+        "method": "Constant-current-weight rebalancing proxy; cash return assumed to be zero",
         "observations": len(returns),
         "volatility": vol,
         "max_drawdown": drawdown(curve),

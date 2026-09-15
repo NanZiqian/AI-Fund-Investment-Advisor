@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     app_timezone: str = "Asia/Shanghai"
     api_token: SecretStr = SecretStr("")
     openai_api_key: SecretStr = SecretStr("")
+    openai_base_url: str = ""
     llm_fast_model: str = ""
     llm_reasoning_model: str = ""
     llm_review_model: str = ""
@@ -55,6 +56,7 @@ class Settings(BaseSettings):
                 "database_url",
                 "api_token",
                 "openai_api_key",
+                "openai_base_url",
                 "telegram_bot_token",
                 "telegram_chat_id",
                 "fred_api_key",

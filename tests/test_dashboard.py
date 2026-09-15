@@ -13,6 +13,6 @@ def test_dashboard_empty_state(monkeypatch, tmp_path):
     assert Settings().database_url == url
     app = AppTest.from_file(Path("dashboard/Home.py").resolve()).run(timeout=30)
     assert not app.exception
-    assert app.title[0].value == "组合总览"
-    app.sidebar.radio[0].set_value("持仓管理").run()
+    assert app.title[0].value == "Overview"
+    app.sidebar.radio[0].set_value("Portfolio").run()
     assert not app.exception

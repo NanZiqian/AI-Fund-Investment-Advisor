@@ -28,9 +28,9 @@ class FakeLLMClient:
 def test_analyst_cannot_change_allocation():
     item = Explanation(
         symbol="012885",
-        thesis="证据有限",
-        risks=["风险"],
-        invalidation_conditions=["过期"],
+        thesis="Limited evidence",
+        risks=["Risk"],
+        invalidation_conditions=["Stale data"],
         evidence_ids=["e1"],
     )
     client = ResearchClient(

@@ -18,11 +18,11 @@ def test_complete_deterministic_plan_and_outcome_persist(session, tmp_path, monk
         positions=[
             PositionInput(
                 symbol="012885",
-                name="测试基金",
+                name="Test Fund",
                 market_value="100",
                 confirmed=True,
                 as_of=now,
-                category="宽基",
+                category="broad market",
                 source="fixture:user",
             )
         ],
@@ -53,13 +53,13 @@ def test_complete_deterministic_plan_and_outcome_persist(session, tmp_path, monk
             session,
             [
                 Article(
-                    title="固定测试新闻",
+                    title="Fixed test article",
                     source_url=f"https://{domain}/test",
                     published_at=now - timedelta(hours=1),
-                    fact="固定测试事实",
-                    interpretation="正面",
-                    uncertainty="测试",
-                    topic="宽基",
+                    fact="Fixed test fact",
+                    interpretation="Positive",
+                    uncertainty="Test uncertainty",
+                    topic="broad market",
                     affected_symbols=["012885"],
                     impact_score=80,
                     confidence=0.9,
@@ -86,7 +86,7 @@ def test_complete_deterministic_plan_and_outcome_persist(session, tmp_path, monk
 
         def get_fund_profile(self, symbol):
             return FundProfile(
-                symbol=symbol, name="测试基金", source="fixture:synthetic", retrieved_at=now
+                symbol=symbol, name="Test Fund", source="fixture:synthetic", retrieved_at=now
             )
 
     monkeypatch.setattr("app.jobs.daily.fetch_fred", lambda *_: ([], ["NOT_CONFIGURED"]))

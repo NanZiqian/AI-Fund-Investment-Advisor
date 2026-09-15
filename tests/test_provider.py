@@ -7,7 +7,7 @@ import pytest
 from app.providers.base import ProviderError, is_fresh
 from app.providers.eastmoney import EastmoneyProvider, extract_json
 
-SCRIPT = """var fS_code = "012885"; var fS_name = "测试A";
+SCRIPT = """var fS_code = "012885"; var fS_name = "Test A";
 var Data_netWorthTrend = [
 {"x":1789401600000,"y":1.0,"equityReturn":0},
 {"x":1789488000000,"y":0.95,"equityReturn":1.0}];"""
@@ -25,7 +25,7 @@ def test_provider_adjusts_distribution_and_caches(session):
     bars = provider.get_history("012885", date(2026, 1, 1), date(2026, 12, 31))
     assert bars[1].nav == Decimal(".95")
     assert bars[1].total_return == Decimal("1.01")
-    assert provider.get_fund_profile("012885").name == "测试A"
+    assert provider.get_fund_profile("012885").name == "Test A"
     assert len(calls) == 1
 
 

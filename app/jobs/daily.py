@@ -172,7 +172,9 @@ def run_daily(
         portfolio_valid = portfolio_confirmed(view, now, settings.portfolio_max_age_days)
         health["portfolio"] = "OK" if portfolio_valid else "UNCONFIRMED_OR_STALE"
         if not portfolio_valid:
-            view["warnings"].append("持仓或现金未确认/过期；请在持仓页面更新")
+            view["warnings"].append(
+                "Holdings or cash are unconfirmed or stale; update them in Portfolio"
+            )
         if any(s in market_errors for s in held_symbols):
             portfolio_valid = False
         snap = Snapshot(
@@ -265,7 +267,13 @@ def run_daily(
                 metric_map.get(i.symbol, {}),
                 fit,
                 news_score=ev["score"],
-                macro_score=equity_macro_score(macro["US" if i.category == "美国宽基" else "CN"]),
+                macro_score=equity_macro_score(
+                    macro[
+                        "US"
+                        if i.category.casefold() in {"us broad market", "us equity"}
+                        else "CN"
+                    ]
+                ),
                 profile=profile,
                 benchmark_return=metric_map.get(i.benchmark_symbol, {}).get("return_60d"),
             )
@@ -500,8 +508,14 @@ def run_daily(
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--offline", action="store_true", help="只读本地数据，不请求网络")
-    parser.add_argument("--refresh", action="store_true", help="创建新的研究版本，旧版保留")
+    parser.add_argument(
+        "--offline", action="store_true", help="Use local data only; make no network requests"
+    )
+    parser.add_argument(
+        "--refresh",
+        action="store_true",
+        help="Create a new research revision and retain the old one",
+    )
     args = parser.parse_args()
     configure_logging()
     run = run_daily(offline=args.offline, refresh=args.refresh)

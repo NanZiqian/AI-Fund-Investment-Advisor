@@ -70,16 +70,22 @@ def recommend(
         "strategic": strategic.to_dict(),
         "time_horizon_days_min": 180,
         "time_horizon_days_max": 1095,
-        "tactical_horizon": "5–20 个净值观测期，仅观察",
+        "tactical_horizon": "5–20 NAV observations; monitoring only",
         "evidence_ids": evidence["ids"],
         "risk_gate_status": result.status,
         "rules_triggered": result.rules,
-        "thesis": "依据结构化数据、量化评分和风控约束生成；请人工复核。",
-        "risks": ["净值为估值参考，申赎成交净值未知", "主动基金与主题标签可能存在偏差"],
+        "thesis": (
+            "Generated from structured data, quantitative scores, and risk controls; "
+            "review manually."
+        ),
+        "risks": [
+            "Published NAV is a valuation reference; the transaction NAV is unknown",
+            "Active-fund exposure may differ from its assigned theme",
+        ],
         "invalidation_conditions": [
-            "数据或基金交易规则过期",
-            "趋势反转或宏观状态改变",
-            "现金或持仓结构改变",
+            "Data or fund trading rules become stale",
+            "Trend reversal or macro regime change",
+            "Cash balance or portfolio structure changes",
         ],
         "generated_at": context.now.isoformat() if isinstance(context.now, datetime) else None,
     }

@@ -20,7 +20,10 @@ def forward_outcome(bars, created_at, benchmark=None, *, now=None):
     result = {
         "method": "next_NAV_gross_total_return",
         "entry_date": None,
-        "note": "首个晚于建议日期的已披露净值为参考起点；按净值观测期计数，不含申赎费用",
+        "note": (
+            "The first published NAV after the recommendation date is the reference point; "
+            "horizons count NAV observations and exclude subscription and redemption fees"
+        ),
     }
     for n in HORIZONS:
         result.update(
@@ -84,7 +87,7 @@ def evaluate(session):
         latest[key] = r
     result = {
         "recommendation_count": len(latest),
-        "method": "每基金每日最终版本，净值毛收益",
+        "method": "Final daily revision per fund; gross NAV return",
         "BUY": {},
         "REDUCE": {},
         "confidence_calibration_20d": [],

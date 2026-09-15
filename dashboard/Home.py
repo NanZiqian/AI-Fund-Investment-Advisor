@@ -19,7 +19,7 @@ from app.portfolio import import_portfolio, parse_csv, portfolio_view
 from app.report import number, pct
 from app.schemas import ProfileUpdate
 
-st.set_page_config(page_title="知基 · 基金研究助手", page_icon="◈", layout="wide")
+st.set_page_config(page_title="FundScope · Fund Research Assistant", page_icon="◈", layout="wide")
 st.markdown(
     """<style>
 .stApp { background:#f4f6f9; color:#14263d; }
@@ -40,17 +40,25 @@ div.stButton > button[kind="primary"] { background:#256c62; border-color:#256c62
 
 settings = Settings()
 with st.sidebar:
-    st.markdown("## ◈ 知基")
+    st.markdown("## ◈ FundScope")
     st.caption("PUBLIC FUND RESEARCH")
     st.divider()
     page = st.radio(
-        "工作台",
-        ["组合总览", "持仓管理", "每日简报", "历史建议", "表现评估", "数据健康", "设置"],
+        "Workspace",
+        [
+            "Overview",
+            "Portfolio",
+            "Daily Briefing",
+            "Recommendation History",
+            "Evaluation",
+            "Data Health",
+            "Settings",
+        ],
         label_visibility="collapsed",
     )
     st.divider()
-    st.caption("人民币 · Asia/Shanghai")
-    st.caption("研究建议由你审核，系统不执行交易。")
+    st.caption("CNY · Asia/Shanghai")
+    st.caption("You review every recommendation. The system never executes trades.")
 
 try:
     with session_factory(settings.database_url)() as session:
@@ -70,11 +78,11 @@ try:
         )
         instruments = list(session.scalars(select(Instrument).order_by(Instrument.symbol)))
 except Exception:
-    st.error("数据库尚未准备好。请先运行 python -m app.cli init-db，再导入持仓。")
+    st.error("The database is not ready. Run python -m app.cli init-db, then import a portfolio.")
     st.stop()
 
 st.markdown(
-    '<div class="eyebrow">PERSONAL INVESTMENT RESEARCH / 个人研究工作台</div>',
+    '<div class="eyebrow">PERSONAL INVESTMENT RESEARCH</div>',
     unsafe_allow_html=True,
 )
 st.title(page)
@@ -84,53 +92,59 @@ def recommendation_table(items):
     return pd.DataFrame(
         [
             {
-                "基金代码": r["symbol"],
-                "基金名称": r["name"],
-                "动作": r["action"],
-                "建议金额 / 元": number(r["proposed_amount"]),
-                "长期评分": r["strategic"]["score"],
-                "短期评分": r["tactical"]["score"],
-                "数据覆盖": pct(r["data_coverage"]),
-                "置信度": pct(r["confidence"]),
+                "Fund code": r["symbol"],
+                "Fund name": r["name"],
+                "Action": r["action"],
+                "Proposed amount / CNY": number(r["proposed_amount"]),
+                "Strategic score": r["strategic"]["score"],
+                "Tactical score": r["tactical"]["score"],
+                "Data coverage": pct(r["data_coverage"]),
+                "Confidence": pct(r["confidence"]),
             }
             for r in items
         ]
     )
 
 
-if page == "组合总览":
-    st.caption("从持仓和证据出发，让每一个投资判断都能回看。")
+if page == "Overview":
+    st.caption("Start with holdings and evidence so every investment judgment remains auditable.")
     display = (
         latest.inputs.get("portfolio", portfolio)
         if latest and latest.inputs.get("portfolio_import") == portfolio
         else portfolio
     )
     if latest and latest.inputs.get("portfolio_import") != portfolio:
-        st.info("本页显示当前导入的持仓；最近报告使用的是此前记录，请重新生成简报以更新研究结果。")
+        st.info(
+            "This page shows the current imported portfolio. The latest report used an earlier "
+            "snapshot; generate a new briefing to refresh the research."
+        )
     if portfolio["warnings"]:
         st.warning(" · ".join(portfolio["warnings"]))
     cols = st.columns(4)
-    cols[0].metric("持仓金额", f"¥ {number(display['invested'])}")
-    cols[1].metric("可用现金", number(display["cash"]))
-    cols[2].metric("总资产", number(display["total"]))
+    cols[0].metric("Invested", f"¥ {number(display['invested'])}")
+    cols[1].metric("Available cash", number(display["cash"]))
+    cols[2].metric("Total assets", number(display["total"]))
     risk = latest.inputs.get("portfolio_risk", {}) if latest else {}
-    cols[3].metric("组合年化波动", pct(risk.get("volatility")))
-    st.caption("金额以已导入记录或已知份额 × 已披露净值计算；日期不明的截图金额只供核对。")
+    cols[3].metric("Annualized volatility", pct(risk.get("volatility")))
+    st.caption(
+        "Amounts use imported records or known units × published NAV. Undated screenshot "
+        "amounts are for verification only."
+    )
     left, right = st.columns([1.3, 1])
     with left:
-        st.subheader("持仓分布")
+        st.subheader("Portfolio Allocation")
         if display["positions"]:
             chart = pd.DataFrame(
                 {
-                    "基金": [p["name"] for p in display["positions"]],
-                    "金额": [float(p["market_value"]) for p in display["positions"]],
+                    "Fund": [p["name"] for p in display["positions"]],
+                    "Amount": [float(p["market_value"]) for p in display["positions"]],
                 }
             )
-            st.bar_chart(chart.set_index("基金"), horizontal=True, color="#347f74", height=320)
+            st.bar_chart(chart.set_index("Fund"), horizontal=True, color="#347f74", height=320)
         else:
-            st.info("先在持仓管理中导入 CSV。")
+            st.info("Import a CSV in Portfolio first.")
     with right:
-        st.subheader("本次研究")
+        st.subheader("Latest Research")
         if latest:
             st.caption(f"{latest.started_at:%Y-%m-%d %H:%M %Z} · {latest.status}")
             counts = {
@@ -139,38 +153,44 @@ if page == "组合总览":
             counters = st.columns(2)
             for idx, (action, count) in enumerate(counts.items()):
                 counters[idx % 2].metric(action, count)
-            st.caption("WATCH 表示观察或数据不足；置信度是未校准的规则评分。")
+            st.caption(
+                "WATCH means monitoring or insufficient data. Confidence is an uncalibrated "
+                "rule-based score."
+            )
         else:
-            st.info("尚无研究报告。")
-    st.subheader("持仓研究清单")
+            st.info("No research report is available yet.")
+    st.subheader("Portfolio Research List")
     st.dataframe(recommendation_table([r.payload for r in recs]), hide_index=True, width="stretch")
-    with st.expander("运行每日分析"):
-        offline = st.checkbox("只使用本地数据（不联网）", value=True)
-        st.caption("联网模式更新基金净值；研究模块仅在本地 .env 启用后调用模型。")
-        if st.button("生成新的研究简报", type="primary"):
+    with st.expander("Run Daily Analysis"):
+        offline = st.checkbox("Use local data only (offline)", value=True)
+        st.caption(
+            "Online mode refreshes fund NAV data. The research module calls an LLM only when "
+            "enabled in the local .env file."
+        )
+        if st.button("Generate New Research Briefing", type="primary"):
             try:
-                with st.spinner("正在更新数据并运行风控…"):
+                with st.spinner("Updating data and applying risk controls…"):
                     run_daily(settings, offline=offline, refresh=True)
                 st.rerun()
             except Exception as exc:
-                st.error(f"运行失败：{type(exc).__name__}。请查看数据健康页。")
+                st.error(f"Run failed: {type(exc).__name__}. See Data Health.")
 
-elif page == "持仓管理":
-    st.caption("同一只基金的 A / C 份额分别记录；金额和份额用十进制文本填写。")
+elif page == "Portfolio":
+    st.caption("Record A and C share classes separately. Enter amounts and units as decimal text.")
     rows = portfolio["positions"]
     if rows:
         st.dataframe(
             pd.DataFrame(
                 [
                     {
-                        "代码": p["symbol"],
-                        "名称": p["name"],
-                        "金额": p["market_value"],
-                        "持有收益": p["holding_profit"],
-                        "份额": p["quantity"],
-                        "记录日期": p["as_of"],
-                        "已确认": p["confirmed"],
-                        "来源": p["source"],
+                        "Code": p["symbol"],
+                        "Name": p["name"],
+                        "Amount": p["market_value"],
+                        "Holding return": p["holding_profit"],
+                        "Units": p["quantity"],
+                        "As of": p["as_of"],
+                        "Confirmed": p["confirmed"],
+                        "Source": p["source"],
                     }
                     for p in rows
                 ]
@@ -178,7 +198,7 @@ elif page == "持仓管理":
             hide_index=True,
             width="stretch",
         )
-    st.subheader("导入 / 手动编辑")
+    st.subheader("Import / Manual Edit")
     keys = [
         "symbol",
         "name",
@@ -199,24 +219,33 @@ elif page == "持仓管理":
     writer.writeheader()
     for row in rows:
         writer.writerow({k: row.get(k) for k in keys})
-    st.download_button("导出当前持仓 CSV", buffer.getvalue(), "portfolio.csv", "text/csv")
-    upload = st.file_uploader("上传 CSV（替换当前持仓，历史快照保留）", type=["csv"])
+    st.download_button(
+        "Export Current Portfolio CSV", buffer.getvalue(), "portfolio.csv", "text/csv"
+    )
+    upload = st.file_uploader(
+        "Upload CSV (replace current portfolio; retain historical snapshots)", type=["csv"]
+    )
     content = upload.getvalue().decode("utf-8-sig") if upload else buffer.getvalue()
-    edited = st.text_area("CSV 内容（可直接修改）", value=content, height=230)
+    edited = st.text_area("CSV content (editable)", value=content, height=230)
     col1, col2 = st.columns(2)
-    cash = col1.text_input("可投资现金 / 元（留空表示未知）", value=portfolio["cash"] or "")
+    cash = col1.text_input(
+        "Investable cash / CNY (blank means unknown)", value=portfolio["cash"] or ""
+    )
     as_of = col2.text_input(
-        "现金 / 持仓核对时间（含时区）",
+        "Cash / portfolio verification time (include timezone)",
         value=portfolio["as_of"] or "",
         placeholder="2026-09-15T20:00:00+08:00",
     )
-    confirm_all = st.checkbox("我已核对本次所有基金代码、份额类别与金额，并以填写时间更新持仓记录")
-    if st.button("保存持仓", type="primary"):
+    confirm_all = st.checkbox(
+        "I verified all fund codes, share classes, and amounts, and want to timestamp this "
+        "portfolio update"
+    )
+    if st.button("Save Portfolio", type="primary"):
         try:
             payload = parse_csv(edited, cash or None, as_of or None)
             if confirm_all:
                 if not as_of:
-                    raise ValueError("确认持仓需要填写核对时间")
+                    raise ValueError("A confirmed portfolio requires a verification time")
                 for p in payload.positions:
                     p.as_of = datetime.fromisoformat(as_of)
                     p.confirmed = True
@@ -225,35 +254,36 @@ elif page == "持仓管理":
             with session_factory(settings.database_url)() as session:
                 import_portfolio(session, payload)
                 session.commit()
-            st.success("已保存。生成新简报后将使用本次持仓。")
+            st.success("Saved. The next briefing will use this portfolio.")
         except Exception as exc:
-            st.error(f"导入未保存：{exc}")
+            st.error(f"Import was not saved: {exc}")
     st.caption(
-        "购买日期 acquired_on 用于赎回费 / 持有期检查；多笔持仓需填写保守的最近购买日期。"
-        "不确定时留空，系统会停止生成减仓金额。"
+        "acquired_on is used for redemption-fee and holding-period checks. For multiple lots, "
+        "use the conservative most recent purchase date. "
+        "Leave it blank when uncertain; the system will block reduction amounts."
     )
 
-elif page == "每日简报":
+elif page == "Daily Briefing":
     reports = [r for r in runs if r.report]
     if not reports:
-        st.info("暂无日报，请从组合总览运行分析。")
+        st.info("No daily briefing is available. Run the analysis from Overview.")
     else:
         chosen = st.selectbox(
-            "选择报告",
+            "Select report",
             reports,
             format_func=lambda r: f"{r.started_at:%Y-%m-%d %H:%M} · {r.status} · {r.id[:8]}",
         )
         st.download_button(
-            "下载 Markdown 日报", chosen.report, f"brief-{chosen.id}.md", "text/markdown"
+            "Download Markdown Briefing", chosen.report, f"brief-{chosen.id}.md", "text/markdown"
         )
         st.markdown(chosen.report)
 
-elif page == "历史建议":
+elif page == "Recommendation History":
     a, b, c = st.columns(3)
-    action = a.selectbox("动作", ["全部", "BUY", "HOLD", "REDUCE", "WATCH"])
-    symbol = b.selectbox("基金", ["全部"] + [i.symbol for i in instruments])
-    start_date = c.date_input("开始日期", value=date.today().replace(day=1))
-    kind = st.selectbox("时间周期", ["全部", "STRATEGIC", "TACTICAL"])
+    action = a.selectbox("Action", ["All", "BUY", "HOLD", "REDUCE", "WATCH"])
+    symbol = b.selectbox("Fund", ["All"] + [i.symbol for i in instruments])
+    start_date = c.date_input("Start date", value=date.today().replace(day=1))
+    kind = st.selectbox("Horizon", ["All", "STRATEGIC", "TACTICAL"])
     with session_factory(settings.database_url)() as session:
         items = list(
             session.scalars(select(Recommendation).order_by(Recommendation.created_at.desc()))
@@ -261,78 +291,86 @@ elif page == "历史建议":
     filtered = [
         r
         for r in items
-        if (action == "全部" or r.action == action)
-        and (symbol == "全部" or r.payload["symbol"] == symbol)
+        if (action == "All" or r.action == action)
+        and (symbol == "All" or r.payload["symbol"] == symbol)
         and r.created_at.date() >= start_date
-        and (kind == "全部" or r.recommendation_type == kind)
+        and (kind == "All" or r.recommendation_type == kind)
     ]
     st.dataframe(
         recommendation_table([r.payload for r in filtered]), hide_index=True, width="stretch"
     )
-    st.caption("同日刷新会保留旧版本；不同版本是替代方案，不可累加成交易计划。")
+    st.caption(
+        "Same-day refreshes retain earlier revisions. Revisions are alternatives and must not "
+        "be combined into one trading plan."
+    )
     for rec in filtered[:30]:
         with st.expander(f"{rec.created_at:%m-%d %H:%M} · {rec.payload['name']} · {rec.action}"):
             st.write(rec.payload["thesis"])
-            st.write("风控：", rec.payload["rules_triggered"])
-            st.write("失效条件：", rec.payload["invalidation_conditions"])
+            st.write("Risk controls:", rec.payload["rules_triggered"])
+            st.write("Invalidation conditions:", rec.payload["invalidation_conditions"])
             st.json(rec.payload)
 
-elif page == "表现评估":
+elif page == "Evaluation":
     st.caption(
-        "使用建议发布后第一个可获得净值作为参考起点，按净值观测期跟踪。不是成交收益或完整策略回测。"
+        "Uses the first available NAV after publication as the reference point and tracks "
+        "NAV-observation horizons. This is neither transaction return nor a complete strategy "
+        "backtest."
     )
     try:
         from app.outcomes import evaluate, update_outcomes
 
         with session_factory(settings.database_url)() as session:
-            if st.button("更新已有净值的跟踪结果"):
+            if st.button("Update Outcomes from Available NAV Data"):
                 update_outcomes(session)
                 session.commit()
             result = evaluate(session)
-        st.metric("去重后的每日建议数", result["recommendation_count"])
-        horizon = st.selectbox("观测周期", ["5d", "20d", "60d", "1d"])
+        st.metric("Deduplicated Daily Recommendations", result["recommendation_count"])
+        horizon = st.selectbox("Observation horizon", ["5d", "20d", "60d", "1d"])
         comparison = []
         for action in ("BUY", "REDUCE"):
             values = result[action][horizon]
             comparison.append(
                 {
-                    "方向": action,
-                    "建议数": result[action]["count"],
-                    "已到期": values["matured_count"],
-                    "命中率": pct(values["hit_rate"]),
-                    "资产平均收益": pct(values["average_asset_return"]),
-                    "资产中位收益": pct(values["median_asset_return"]),
-                    "相对基准超额": pct(values["average_excess_asset_return"]),
-                    "最差回撤": pct(values["worst_drawdown"]),
+                    "Direction": action,
+                    "Recommendations": result[action]["count"],
+                    "Matured": values["matured_count"],
+                    "Hit rate": pct(values["hit_rate"]),
+                    "Average asset return": pct(values["average_asset_return"]),
+                    "Median asset return": pct(values["median_asset_return"]),
+                    "Average excess vs benchmark": pct(values["average_excess_asset_return"]),
+                    "Worst drawdown": pct(values["worst_drawdown"]),
                 }
             )
         st.dataframe(pd.DataFrame(comparison), hide_index=True, width="stretch")
         st.caption(
-            "BUY 命中 = 后续资产上涨；REDUCE 命中 = 后续资产下跌。收益列始终保留资产原始方向。"
-            "同基金同日仅统计最终版本；未到期和缺基准均显示未知。"
+            "A BUY hit means the asset later rose; a REDUCE hit means it later fell. Return "
+            "columns always retain the asset's original direction. Only the final same-day "
+            "revision per fund is counted. Immature observations and missing benchmarks show "
+            "as unknown."
         )
-        st.subheader("置信度校准 · 20 期")
+        st.subheader("Confidence Calibration · 20 Observations")
         if result["confidence_calibration_20d"]:
             st.dataframe(pd.DataFrame(result["confidence_calibration_20d"]), hide_index=True)
         else:
             st.info(
-                "尚无到期的 BUY / REDUCE 样本。系统会每天积累结果，不能用未到期数据评价准确率。"
+                "No matured BUY or REDUCE samples are available. The system accumulates outcomes "
+                "daily; immature data cannot measure accuracy."
             )
     except ImportError:
-        st.info("结果跟踪模块尚未就绪。")
+        st.info("The outcome tracking module is not ready.")
 
-elif page == "数据健康":
+elif page == "Data Health":
     if not runs:
-        st.info("暂无运行记录。")
+        st.info("No run records are available.")
     else:
         st.dataframe(
             pd.DataFrame(
                 [
                     {
-                        "时间": r.started_at,
-                        "状态": r.status,
-                        "运行 ID": r.id,
-                        "错误": r.error_message,
+                        "Time": r.started_at,
+                        "Status": r.status,
+                        "Run ID": r.id,
+                        "Error": r.error_message,
                     }
                     for r in runs
                 ]
@@ -340,36 +378,43 @@ elif page == "数据健康":
             hide_index=True,
             width="stretch",
         )
-        st.subheader("最近运行的模块状态")
+        st.subheader("Latest Module Status")
         st.json(runs[0].health)
-        st.subheader("耗时与成本")
+        st.subheader("Runtime and Cost")
         st.json(runs[0].telemetry)
         st.caption(
-            "未配置各模型计费价格时，费用显示 null，不能当作免费。"
-            "日历默认使用工作日近似，节假日可能使数据被保守地标记过期。"
+            "Cost is null until model prices are configured; null does not mean free. "
+            "The calendar approximates valuation days with weekdays, so holidays may "
+            "conservatively mark data as stale."
         )
 
-elif page == "设置":
-    st.caption("模型、密钥、通知和风控阈值在本地 .env 中配置；此页面不显示密钥。")
-    st.json(settings.public())
-    st.subheader("基金资料与申赎规则")
+elif page == "Settings":
     st.caption(
-        "填写来自基金公司或销售平台的已核实资料，不能用主观分数补齐覆盖率。"
-        "规则超过 7 天后须复核。daily_limit=null 表示已核实没有列明限额。"
+        "Configure models, secrets, notifications, and risk thresholds in the local .env file. "
+        "This page never displays secrets."
+    )
+    st.json(settings.public())
+    st.subheader("Fund Profile and Trading Rules")
+    st.caption(
+        "Enter verified information from the fund manager or sales platform. Do not invent "
+        "scores to increase coverage. Recheck rules older than seven days. daily_limit=null "
+        "means you verified that no limit was stated."
     )
     if instruments:
-        item = st.selectbox("基金", instruments, format_func=lambda i: f"{i.symbol} {i.name}")
+        item = st.selectbox("Fund", instruments, format_func=lambda i: f"{i.symbol} {i.name}")
         profile = st.text_area(
-            "资料 JSON", value=json.dumps(item.profile, ensure_ascii=False, indent=2), height=260
+            "Profile JSON", value=json.dumps(item.profile, ensure_ascii=False, indent=2), height=260
         )
-        if st.button("保存已核实资料"):
+        if st.button("Save Verified Profile"):
             try:
                 validated = ProfileUpdate.model_validate_json(profile)
                 with session_factory(settings.database_url)() as session:
                     session.get(Instrument, item.id).profile = validated.model_dump(mode="json")
                     session.commit()
-                st.success("已保存。请重新生成日报。")
+                st.success("Saved. Generate a new daily briefing.")
             except Exception as exc:
-                st.error(f"未保存：{exc}")
+                st.error(f"Not saved: {exc}")
     st.code("python -m app.cli import-universe config/fund_universe.csv", language="bash")
-    st.caption("候选池由你维护和批准，默认不添加新基金。")
+    st.caption(
+        "You maintain and approve the candidate universe. No new funds are added by default."
+    )

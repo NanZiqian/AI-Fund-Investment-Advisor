@@ -23,7 +23,7 @@ def context(**changes):
         coverage=1,
         confidence=0.9,
         independent_sources=2,
-        category="宽基",
+        category="broad market",
         portfolio_volatility=0.15,
         acquired_on=date(2025, 1, 1),
         now=NOW,
@@ -83,7 +83,7 @@ def test_concentrated_holding_reduce_through_gate():
     ev = {"ids": ["e1", "e2"], "quality": 1, "model_confidence": 0.9, "independent_sources": 2}
     result = recommend(
         "012885",
-        "测试",
+        "test",
         signal,
         signal,
         context(current_value=D(3000)),

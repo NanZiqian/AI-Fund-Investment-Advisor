@@ -29,9 +29,11 @@ class PositionInput(StrictModel):
     @model_validator(mode="after")
     def validate_confirmed(self):
         if self.confirmed and (self.as_of is None or self.symbol.startswith("UNRESOLVED")):
-            raise ValueError("确认持仓必须有基金代码和带时区的日期")
+            raise ValueError(
+                "A confirmed holding requires a fund code and timezone-aware timestamp"
+            )
         if self.acquired_on and self.as_of and self.acquired_on > self.as_of.date():
-            raise ValueError("购买日期不能晚于持仓日期")
+            raise ValueError("Acquisition date cannot be later than the holding timestamp")
         return self
 
 
@@ -46,9 +48,9 @@ class PortfolioImport(StrictModel):
     def consistent(self):
         symbols = [p.symbol for p in self.positions]
         if len(symbols) != len(set(symbols)):
-            raise ValueError("重复基金代码；请先合并同一份额的记录")
+            raise ValueError("Duplicate fund code; combine records for the same share class first")
         if self.cash is not None and self.as_of is None:
-            raise ValueError("现金余额必须注明日期")
+            raise ValueError("A cash balance requires a timestamp")
         return self
 
 
@@ -61,7 +63,7 @@ class FundRules(StrictModel):
     redemption_status: Literal["OPEN", "CLOSED", "UNKNOWN"]
     minimum_holding_days: int | None = Field(default=None, ge=0, le=10000)
     redemption_fee_rate: Decimal | None = Field(default=None, ge=0, le=1)
-    settlement_note: str = "到账时间以平台确认为准"
+    settlement_note: str = "Confirm settlement timing with the sales platform"
 
 
 class ProfileUpdate(StrictModel):

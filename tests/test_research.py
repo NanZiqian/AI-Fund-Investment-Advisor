@@ -10,13 +10,13 @@ NOW = datetime(2026, 9, 15, tzinfo=UTC)
 
 def article(**kwargs):
     fields = dict(
-        title="政策",
+        title="Policy",
         source_url="https://www.pbc.gov.cn/news/123",
         published_at=NOW - timedelta(hours=2),
-        fact="测试事实",
-        interpretation="解释",
-        uncertainty="不确定",
-        topic="宏观",
+        fact="Test fact",
+        interpretation="Explanation",
+        uncertainty="Uncertain",
+        topic="macro",
         affected_symbols=["012885"],
         impact_score=60,
         confidence=0.8,

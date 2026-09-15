@@ -41,7 +41,7 @@ class Instrument(Base):
 class Account(Base):
     __tablename__ = "accounts"
     id: Mapped[str] = mapped_column(primary_key=True, default="personal")
-    name: Mapped[str] = mapped_column(default="我的基金账户")
+    name: Mapped[str] = mapped_column(default="My Fund Account")
     currency: Mapped[str] = mapped_column(default="CNY")
     cash: Mapped[Decimal | None] = mapped_column(Money)
     as_of: Mapped[datetime | None] = mapped_column(AwareTime)

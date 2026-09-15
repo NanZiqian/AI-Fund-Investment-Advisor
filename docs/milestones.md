@@ -1,24 +1,24 @@
-# 阶段验收记录
+# Milestone Verification Record
 
-按 spec.md 顺序实施。测试均使用固定数据、mock HTTP 或 fake LLM，不消费真实 API token。
+Implementation followed the staged plan in `spec.md`. Automated tests use fixed fixtures, mocked HTTP, or fake LLM clients and do not consume paid API tokens.
 
-| 阶段 | 内容 | 状态 |
+| Stage | Scope | Recorded status |
 |---|---|---|
-| 1 | 工程、配置、数据库、迁移、健康接口、CI | 3 项测试通过后推进 |
-| 2 | 持仓、现金、CSV、快照 | 6 项累计测试通过 |
-| 3 | 行情、基金资料、缓存、重试 | 10 项累计测试通过 |
-| 4 | 收益、波动、回撤、组合风险 | 15 项累计测试通过 |
-| 5 | 双时间周期评分、覆盖率、排名 | 18 项累计测试通过 |
-| 6 | 新闻研究、宏观、来源保存 | 21 项累计测试通过 |
-| 7 | 金额建议、风控否决 | 36 项累计测试通过 |
-| 8 | 受限 LLM 解释 | 38 项累计测试通过 |
-| 9 | 日流水线、报告、通知 | 40 项累计测试通过；API 后 42 项 |
-| 10 | Streamlit 仪表盘 | 43 项累计测试通过 |
-| 11 | 日调度、手动调度 | 44 项累计测试通过 |
-| 12 | 1/5/20/60 期结果、评估 | 47 项累计测试通过 |
+| 1 | Project structure, configuration, database, migrations, health endpoint | Completed |
+| 2 | Portfolio, cash, CSV import, and snapshots | Completed |
+| 3 | Market data, fund profiles, cache, and retries | Completed |
+| 4 | Returns, volatility, drawdown, and portfolio risk | Completed |
+| 5 | Tactical and strategic scores, coverage, and ranking | Completed |
+| 6 | News research, macro data, and source persistence | Completed with fake external clients |
+| 7 | Proposed amounts and deterministic risk vetoes | Completed |
+| 8 | Restricted LLM explanations | Completed with a fake LLM client |
+| 9 | Daily pipeline, report, and notifications | Completed with fake notification clients |
+| 10 | Streamlit dashboard | Completed |
+| 11 | Manual execution workflow | Completed |
+| 12 | 1/5/20/60-observation outcome evaluation | Completed |
 
-交付前增加端到端买入缩量、建议重放、NaN 风控、数据库迁移、FRED/Telegram mock 测试。目前 52 passed，1 skipped（本机无 PostgreSQL 服务）。Ruff 检查及格式检查通过。
+The last full local verification recorded 52 passing tests and one skipped PostgreSQL test. Ruff lint and formatting checks passed at that time. The Eastmoney adapter was exercised once online for the seven funds from the original screenshot. The OpenAI, FRED, and Telegram paths have not been validated against real credentials.
 
-已运行截图持仓的离线分析、7 只基金公开行情联网更新；已通过浏览器检查仪表盘显示，并修复深色系统主题下卡片数字的对比度问题。持仓缺少现金和日期的状态保持未确认，没有伪造份额或产生实际买卖。
+The portfolio imported from the screenshot intentionally remains unconfirmed when cash, date, units, or share class cannot be verified. The system does not fabricate missing values or produce transaction amounts from an undated screenshot.
 
-环境说明：当前机器未提供 Docker / PostgreSQL 命令。开发验收先使用 SQLite；PostgreSQL 迁移另在 CI service 验证。外部付费服务未配置时不伪称已完成线上验证。
+No Python environment is committed. Current users create and manage the documented Conda environment themselves.

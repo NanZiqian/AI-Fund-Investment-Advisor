@@ -7,7 +7,9 @@ from app.schemas import PortfolioImport, PositionInput
 
 
 def test_snapshot_exact_unknown_cash_and_idempotent_import(session):
-    payload = parse_csv("symbol,name,market_value,source\n012885,光伏A,783.67,user:screenshot")
+    payload = parse_csv(
+        "symbol,name,market_value,source\n012885,Solar Fund A,783.67,user:screenshot"
+    )
     first = import_portfolio(session, payload)
     import_portfolio(session, payload)
     view = portfolio_view(session)
@@ -31,7 +33,7 @@ def test_validation_and_csv_leading_zero():
 
 def test_known_zero_cash(session):
     payload = parse_csv(
-        "symbol,name,market_value,source\n012885,光伏A,100,test",
+        "symbol,name,market_value,source\n012885,Solar Fund A,100,test",
         cash="0",
         as_of="2026-09-15T10:00:00+08:00",
     )

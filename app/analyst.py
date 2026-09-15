@@ -19,9 +19,10 @@ def explain(research_client, recommendations, macro, evidence, *, review=False):
     allowed = {r["symbol"]: r for r in recommendations}
     prompt = json.dumps(
         {
-            "task": "解释已通过确定性风控的研究结果。不可修改动作、数字、金额、评分或置信度。"
-            "不得添加输入外事实，不写新数字，只写解释文字。引用只能使用给定 evidence_ids。"
-            "缺少证据时明确说明不足，不补造理由。",
+            "task": "Explain the research results after deterministic risk controls. Do not change "
+            "actions, numbers, amounts, scores, or confidence. Add no facts or numbers beyond the "
+            "input. Use only the supplied evidence_ids. State evidence gaps plainly and never "
+            "invent a rationale.",
             "recommendations": recommendations,
             "macro": macro,
             "evidence": evidence,

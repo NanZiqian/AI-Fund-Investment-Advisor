@@ -6,39 +6,44 @@ def text(value):
 
 
 def pct(value):
-    return f"{Decimal(str(value)) * 100:.1f}%" if value is not None else "未知"
+    return f"{Decimal(str(value)) * 100:.1f}%" if value is not None else "Unknown"
 
 
 def number(value):
-    return f"{Decimal(str(value)):,.2f}" if value is not None else "未知"
+    return f"{Decimal(str(value)):,.2f}" if value is not None else "Unknown"
 
 
 def daily_report(now, portfolio, risk, macro, recommendations, evidence, health):
     lines = [
-        f"# 基金每日研究简报 · {now:%Y-%m-%d}",
+        f"# Daily Fund Research Briefing · {now:%Y-%m-%d}",
         "",
-        "研究与决策支持 · 人民币 · 无自动交易",
+        "Research and decision support · CNY · No automated trading",
         "",
-        "## 资产概览",
+        "## Portfolio Overview",
         "",
-        f"已投资 **¥{number(portfolio['invested'])}** ｜ 可用现金 **{number(portfolio['cash'])}**"
-        f" ｜ 总资产 **{number(portfolio['total'])}** ｜ 现金比例 **{pct(portfolio['cash_ratio'])}**",
+        f"Invested **¥{number(portfolio['invested'])}** | "
+        f"Available cash **{number(portfolio['cash'])}** | "
+        f"Total assets **{number(portfolio['total'])}** | "
+        f"Cash ratio **{pct(portfolio['cash_ratio'])}**",
         "",
-        f"组合年化波动率：{pct(risk.get('volatility'))}；最大回撤：{pct(risk.get('max_drawdown'))}。",
-        "风险指标按当前权重和已披露净值估算，非账户真实历史收益。",
+        f"Annualized portfolio volatility: {pct(risk.get('volatility'))}; "
+        f"maximum drawdown: {pct(risk.get('max_drawdown'))}.",
+        "Risk metrics use current weights and published NAV data; they are not the "
+        "account's realized history.",
         "",
-        "## 宏观环境",
+        "## Macro Environment",
         "",
     ]
     for region, item in macro.items():
         lines.append(
-            f"- {region}：风险 {item['risk_regime']} / 通胀 {item['inflation_regime']} / 利率 {item['rate_regime']}"
+            f"- {region}: risk {item['risk_regime']} / "
+            f"inflation {item['inflation_regime']} / rates {item['rate_regime']}"
         )
     lines += [
         "",
-        "## 现有持仓",
+        "## Current Holdings",
         "",
-        "基金 | 权重 | 短期评分 | 长期评分 | 动作 | 建议金额 | 置信度",
+        "Fund | Weight | Tactical score | Strategic score | Action | Proposed amount | Confidence",
         "--- | ---: | ---: | ---: | --- | ---: | ---:",
     ]
     for r in recommendations:
@@ -48,59 +53,68 @@ def daily_report(now, portfolio, risk, macro, recommendations, evidence, health)
                 f"{r['tactical']['score']} | {r['strategic']['score']} | {r['action']} | "
                 f"¥{number(r['proposed_amount'])} | {pct(r['confidence'])}"
             )
-    for kind, label in (("tactical", "短期观察机会"), ("strategic", "长期候选机会")):
+    for kind, label in (("tactical", "Tactical Watchlist"), ("strategic", "Strategic Candidates")):
         lines += ["", f"## {label}", ""]
         candidates = sorted(
             [r for r in recommendations if not r["held"] and r[kind]["score"] is not None],
             key=lambda r: -r[kind]["score"],
         )[:3]
         lines += [
-            f"- {text(r['name'])}：{r[kind]['score']} / 100；覆盖率 {pct(r[kind]['coverage'])}"
+            f"- {text(r['name'])}: {r[kind]['score']} / 100; coverage {pct(r[kind]['coverage'])}"
             for r in candidates
-        ] or ["当前没有通过数据检查的已批准候选基金。"]
-    lines += ["", "## 风险与数据提醒", ""]
+        ] or ["No approved candidate currently passes the data checks."]
+    lines += ["", "## Risk and Data Warnings", ""]
     lines += [f"- {text(w)}" for w in portfolio["warnings"]]
     for r in recommendations:
         if r["rules_triggered"]:
             lines.append(f"- {text(r['name'])}：{'、'.join(r['rules_triggered'])}")
     for stage, state in health.items():
         lines.append(f"- {stage}：{text(state)}")
-    lines += ["", "## 建议解释", ""]
+    lines += ["", "## Recommendation Explanations", ""]
     for r in recommendations:
         lines += [
             f"### {text(r['name'])} · {r['action']}",
             "",
-            f"金额 ¥{number(r['proposed_amount'])}；覆盖率 {pct(r['data_coverage'])}；"
-            f"置信度 {pct(r['confidence'])}（规则评分，非校准后的获利概率）。",
+            f"Amount ¥{number(r['proposed_amount'])}; coverage {pct(r['data_coverage'])}; "
+            f"confidence {pct(r['confidence'])} "
+            "(a rule-based score, not a calibrated profit probability).",
             "",
             text(r["thesis"]),
             "",
-            "风险：" + "；".join(map(text, r["risks"])),
+            "Risks: " + "; ".join(map(text, r["risks"])),
             "",
-            "失效条件：" + "；".join(map(text, r["invalidation_conditions"])),
+            "Invalidation conditions: " + "; ".join(map(text, r["invalidation_conditions"])),
             "",
-            "证据：" + (", ".join(f"[{e}]" for e in r["evidence_ids"]) or "无符合要求的新闻证据"),
+            "Evidence: "
+            + (
+                ", ".join(f"[{e}]" for e in r["evidence_ids"])
+                or "No qualifying news evidence"
+            ),
             "",
         ]
-    lines += ["## 主要新闻与证据", ""]
+    lines += ["## Material News and Evidence", ""]
     for item in evidence[:10]:
         p = item["payload"]
         lines += [
             f"- [{text(p['title'])}]({item['source_url']}) [{item['id']}] · {item['published_at']}",
-            f"  摘要（模型提取）：{text(p['fact'])}；解释：{text(p['interpretation'])}；不确定性：{text(p['uncertainty'])}",
+            f"  Model-extracted fact: {text(p['fact'])}; "
+            f"interpretation: {text(p['interpretation'])}; "
+            f"uncertainty: {text(p['uncertainty'])}",
         ]
     if not evidence:
-        lines.append("无通过来源与发布时间检查的研究证据。")
-    lines += ["", "## 净值来源", ""]
+        lines.append("No research evidence passed the source and publication-time checks.")
+    lines += ["", "## NAV Sources", ""]
     for r in recommendations:
         if r.get("market_source"):
             lines.append(
-                f"- {r['symbol']}：[数据源]({r['market_source']}) · 净值日期 {r.get('nav_date', '未知')}"
+                f"- {r['symbol']}: [data source]({r['market_source']}) · "
+                f"NAV date {r.get('nav_date', 'Unknown')}"
             )
     lines += [
         "",
-        "场外基金按未知成交净值申赎；申购额度、赎回费、到账时间以基金公司和销售平台确认为准。",
-        "未执行任何交易。报告用于个人研究，不构成收益承诺。",
+        "Off-exchange funds transact at an unknown NAV. Confirm purchase limits, "
+        "redemption fees, and settlement timing with the fund manager and sales platform.",
+        "No trades were executed. This report is personal research and does not promise returns.",
         "",
     ]
     return "\n".join(lines)

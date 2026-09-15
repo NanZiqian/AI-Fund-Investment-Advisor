@@ -7,7 +7,7 @@ from app.db import make_engine
 
 def create_app(settings=None):
     settings = settings or Settings()
-    api = FastAPI(title="中国公募基金研究助手", version="0.1.0")
+    api = FastAPI(title="China Public Fund Research Assistant", version="0.1.0")
     api.state.settings = settings
     from app.api import router
 

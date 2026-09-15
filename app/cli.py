@@ -19,7 +19,7 @@ def import_universe(session, path):
         rows = list(csv.DictReader(handle))
     for row in rows:
         if row["market"] != "CN":
-            raise ValueError("V1 仅支持境内公募基金的人民币份额")
+            raise ValueError("V1 supports only CNY share classes of mainland Chinese public funds")
         valid = PositionInput(
             symbol=row["symbol"],
             name=row["name"],
@@ -44,7 +44,7 @@ def import_universe(session, path):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="中国公募基金研究助手")
+    parser = argparse.ArgumentParser(description="China Public Fund Research Assistant")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("init-db")
     imp = sub.add_parser("import-portfolio")
@@ -72,7 +72,8 @@ def main():
             )
             snap = import_portfolio(session, payload)
             print(
-                f"Imported {len(payload.positions)} positions, invested={snap.invested_value}, cash={snap.cash_value}"
+                f"Imported {len(payload.positions)} positions, "
+                f"invested={snap.invested_value}, cash={snap.cash_value}"
             )
         elif args.command == "import-universe":
             import_universe(session, args.path)

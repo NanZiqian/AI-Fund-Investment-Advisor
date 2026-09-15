@@ -9,10 +9,10 @@ def notify_telegram(settings, day, recommendations, client=None):
         return "DISABLED"
     if not settings.telegram_bot_token.get_secret_value() or not settings.telegram_chat_id:
         raise ProviderError("Telegram credentials missing")
-    message = f"基金研究日报 {day}\n"
+    message = f"Daily Fund Research Briefing {day}\n"
     for r in recommendations:
         message += f"{r['symbol']} {r['action']} CNY {r['proposed_amount']}\n"
-    message += "详情请查看本地仪表盘。未执行任何交易。"
+    message += "See the local dashboard for details. No trades were executed."
     own = client is None
     client = client or httpx.Client()
     try:

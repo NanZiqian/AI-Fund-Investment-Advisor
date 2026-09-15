@@ -25,7 +25,10 @@ def auth(request: Request, authorization: str | None = Header(None)):
 
 def write_auth(request: Request, authorization: str | None = Header(None)):
     if not request.app.state.settings.api_token.get_secret_value():
-        raise HTTPException(503, "请先设置 API_TOKEN 再调用写入接口；本地可使用 CLI 或仪表盘")
+        raise HTTPException(
+            503,
+            "Set API_TOKEN before using write endpoints; use the local CLI or dashboard otherwise",
+        )
     auth(request, authorization)
 
 
@@ -120,7 +123,7 @@ def daily(payload: RunRequest, request: Request):
             run_daily(request.app.state.settings, offline=payload.offline, refresh=payload.refresh)
         )
     except Exception:
-        raise HTTPException(500, "运行失败，请查看 /runs 的错误状态") from None
+        raise HTTPException(500, "Run failed; inspect the error state at /runs") from None
 
 
 @router.get("/recommendations/latest", dependencies=[Depends(auth)])

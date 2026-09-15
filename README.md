@@ -96,6 +96,7 @@ OPENAI_BASE_URL=
 LLM_FAST_MODEL=your_web_search_capable_model
 LLM_REASONING_MODEL=your_structured_output_capable_model
 LLM_REVIEW_MODEL=
+LLM_TIMEOUT_SECONDS=180
 RESEARCH_ENABLED=true
 ```
 
@@ -121,6 +122,7 @@ An OpenAI-compatible local gateway may accept the Responses API while implementi
 | `LLM_FAST_MODEL` | Research model that supports Responses, structured output, and Web Search |
 | `LLM_REASONING_MODEL` | Model that explains already-calculated recommendations |
 | `LLM_REVIEW_MODEL` | Optional second explanation pass for high volatility or conflicting signals |
+| `LLM_TIMEOUT_SECONDS` | Per-operation LLM timeout; defaults to 180 seconds |
 | `FRED_API_KEY` | Optional US macroeconomic data source |
 | `API_TOKEN` | Protects application write endpoints when the separate FastAPI service is used |
 | `TELEGRAM_ENABLED` | Enables Telegram only when explicitly set to `true` |

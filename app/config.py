@@ -13,6 +13,7 @@ LLM_ENV_KEYS = frozenset(
         "LLM_FAST_MODEL",
         "LLM_REASONING_MODEL",
         "LLM_REVIEW_MODEL",
+        "LLM_TIMEOUT_SECONDS",
         "RESEARCH_ENABLED",
     }
 )
@@ -70,6 +71,7 @@ class Settings(BaseSettings):
     llm_fast_model: str = ""
     llm_reasoning_model: str = ""
     llm_review_model: str = ""
+    llm_timeout_seconds: int = Field(180, ge=30, le=600)
     research_enabled: bool = False
     telegram_enabled: bool = False
     telegram_bot_token: SecretStr = SecretStr("")

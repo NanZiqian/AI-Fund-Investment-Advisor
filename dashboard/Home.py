@@ -258,6 +258,15 @@ if page == "Overview":
             value=settings.llm_review_model,
             key="run_llm_review_model",
         )
+        llm_timeout_seconds = st.number_input(
+            "LLM request timeout (seconds)",
+            min_value=30,
+            max_value=600,
+            value=settings.llm_timeout_seconds,
+            step=30,
+            key="run_llm_timeout_seconds",
+            help="Use a longer timeout for local models and Web Search requests.",
+        )
         if offline:
             st.info("Offline mode always makes zero market-data and LLM API calls.")
         elif not research_enabled:
@@ -273,6 +282,7 @@ if page == "Overview":
                 "LLM_FAST_MODEL": fast_model.strip(),
                 "LLM_REASONING_MODEL": reasoning_model.strip(),
                 "LLM_REVIEW_MODEL": review_model.strip(),
+                "LLM_TIMEOUT_SECONDS": str(llm_timeout_seconds),
                 "RESEARCH_ENABLED": str(research_enabled).lower(),
             }
             if clear_api_key:
@@ -297,6 +307,7 @@ if page == "Overview":
                 "llm_fast_model": fast_model.strip(),
                 "llm_reasoning_model": reasoning_model.strip(),
                 "llm_review_model": review_model.strip(),
+                "llm_timeout_seconds": llm_timeout_seconds,
                 "research_enabled": research_enabled,
             }
         )

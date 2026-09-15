@@ -91,7 +91,7 @@ class ResearchClient:
         self.using_json_fallback = ensure_openai_json_parser()
         client_options = {
             "api_key": settings.openai_api_key.get_secret_value(),
-            "timeout": 45,
+            "timeout": settings.llm_timeout_seconds,
             "max_retries": 2,
         }
         if settings.openai_base_url:

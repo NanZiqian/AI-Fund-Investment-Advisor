@@ -1,0 +1,21 @@
+{
+  "source": "https://example.com/replace-with-fund-issuer-disclosure",
+  "as_of": "2000-01-01T00:00:00+08:00",
+  "expense_ratio": null,
+  "diversification_score": null,
+  "liquidity_score": null,
+  "valuation_score": null,
+  "tracking_score": null,
+  "scoring_notes": "空白模板；请依据真实公告填入，不得作为真实资料导入。",
+  "rules": {
+    "source": "https://example.com/replace-with-current-fund-rules",
+    "as_of": "2000-01-01T00:00:00+08:00",
+    "subscription_status": "UNKNOWN",
+    "daily_limit": null,
+    "minimum_subscription": "0",
+    "redemption_status": "UNKNOWN",
+    "minimum_holding_days": null,
+    "redemption_fee_rate": null,
+    "settlement_note": "请核实销售平台的确认与到账安排"
+  }
+}

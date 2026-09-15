@@ -109,6 +109,8 @@ On Windows, some Conda environments can contain a `jiter` native DLL that the op
 
 The implementation uses the OpenAI Responses API with structured outputs and Web Search. See the official [Responses API reference](https://developers.openai.com/api/reference/resources/responses/methods/create) and [Web Search guide](https://developers.openai.com/api/docs/guides/tools-web-search).
 
+An OpenAI-compatible local gateway may accept the Responses API while implementing only part of it. FundScope tolerates gateways that reject `max_tool_calls`, schemas that reject the JSON Schema `uri` format, and Web Search responses whose `sources` field is `null`. News is admitted as evidence only when the response also contains Web Search source URLs or URL citations. If a gateway performs searches but omits that metadata, Data Health reports `NO_VERIFIABLE_SOURCES`; the quantitative analysis remains usable, while the LLM explanation has no accepted news evidence.
+
 ### Configuration reference
 
 | Variable | Purpose |

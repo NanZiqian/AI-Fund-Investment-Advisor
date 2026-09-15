@@ -1,3 +1,4 @@
+import json
 from datetime import UTC, datetime, timedelta
 
 import httpx
@@ -13,6 +14,7 @@ from app.research import (
     accept_articles,
     ensure_openai_json_parser,
     evidence_summary,
+    source_urls,
     store_articles,
 )
 
@@ -48,6 +50,8 @@ def test_research_rejects_hallucinated_future_and_unknown():
     assert len(accepted) == 1
     with pytest.raises(ValueError):
         Article(**(article().model_dump() | {"action": "BUY"}))
+    with pytest.raises(ValueError):
+        article(source_url="not-a-url")
 
 
 def test_news_dedup_and_independent_sources(session):
@@ -74,6 +78,26 @@ def test_macro_missing_stale_and_region_separation():
     assert regime(rows, NOW)["inflation_regime"] == "DISINFLATIONARY"
     assert regime(rows, NOW, "US")["inflation_regime"] == "UNCERTAIN"
     assert regime(rows, NOW + timedelta(days=500))["inflation_regime"] == "UNCERTAIN"
+
+
+def test_source_urls_accepts_null_sources_from_compatible_endpoints():
+    response = {
+        "output": [
+            {"type": "web_search_call", "action": {"sources": None}},
+            {"type": "reasoning", "content": None},
+            {
+                "type": "message",
+                "content": [
+                    {
+                        "annotations": [
+                            {"type": "url_citation", "url": "https://example.com/report"}
+                        ]
+                    }
+                ],
+            },
+        ]
+    }
+    assert source_urls(response) == {"https://example.com/report"}
 
 
 def test_stdlib_json_fallback_replaces_unloadable_jiter(monkeypatch):
@@ -128,4 +152,5 @@ def test_stdlib_json_fallback_replaces_unloadable_jiter(monkeypatch):
     researcher = ResearchClient(Settings(openai_api_key="test"), client=client)
     parsed, _ = researcher.parse("test-model", ResearchBatch, "test")
     assert parsed == ResearchBatch(articles=[])
+    json.dumps(researcher.traces)
     http_client.close()

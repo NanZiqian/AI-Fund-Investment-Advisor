@@ -6,7 +6,7 @@ from types import ModuleType
 from urllib.parse import urlparse
 
 from openai import OpenAI
-from pydantic import AwareDatetime, Field, HttpUrl
+from pydantic import AwareDatetime, Field, field_validator
 from sqlalchemy import select
 
 from app.db.models import News
@@ -16,7 +16,7 @@ from app.schemas import StrictModel
 
 class Article(StrictModel):
     title: str
-    source_url: HttpUrl
+    source_url: str
     published_at: AwareDatetime | None
     fact: str
     interpretation: str
@@ -25,6 +25,14 @@ class Article(StrictModel):
     affected_symbols: list[str]
     impact_score: float = Field(ge=-100, le=100)
     confidence: float = Field(ge=0, le=1)
+
+    @field_validator("source_url")
+    @classmethod
+    def validate_source_url(cls, value):
+        parsed = urlparse(value)
+        if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+            raise ValueError("source_url must be an absolute HTTP(S) URL")
+        return value
 
 
 class ResearchBatch(StrictModel):
@@ -54,17 +62,27 @@ def ensure_openai_json_parser():
 
 def source_urls(response):
     result = set()
-    raw = response.model_dump() if hasattr(response, "model_dump") else response
+    raw = response_json(response)
     for item in raw.get("output", []):
         if item.get("type") == "web_search_call":
-            for source in item.get("action", {}).get("sources", []):
+            action = item.get("action") or {}
+            for source in action.get("sources") or []:
                 if source.get("url"):
                     result.add(source["url"])
-        for content in item.get("content", []):
-            for annotation in content.get("annotations", []):
+        for content in item.get("content") or []:
+            for annotation in content.get("annotations") or []:
                 if annotation.get("type") == "url_citation" and annotation.get("url"):
                     result.add(annotation["url"])
     return result
+
+
+def response_json(response):
+    if not hasattr(response, "model_dump"):
+        return response
+    try:
+        return response.model_dump(mode="json", warnings=False)
+    except TypeError:
+        return response.model_dump()
 
 
 class ResearchClient:
@@ -91,7 +109,6 @@ class ResearchClient:
             options = {
                 "tools": [{"type": "web_search", "search_context_size": "low"}],
                 "include": ["web_search_call.action.sources"],
-                "max_tool_calls": 2,
             }
         response = self.client.responses.parse(
             model=model,
@@ -117,7 +134,7 @@ class ResearchClient:
         usage = response.usage
         self.input_tokens += usage.input_tokens if usage else 0
         self.output_tokens += usage.output_tokens if usage else 0
-        raw = response.model_dump()
+        raw = response_json(response)
         self.searches += sum(
             item.get("type") == "web_search_call" for item in raw.get("output", [])
         )

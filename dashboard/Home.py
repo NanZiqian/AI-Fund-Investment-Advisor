@@ -140,6 +140,11 @@ def llm_error_message(health):
             "after updating this project; the bundled standard-library JSON fallback should "
             "handle an incompatible jiter DLL without installing another package."
         ),
+        "NO_VERIFIABLE_SOURCES": (
+            "LLM searches completed, but the API endpoint returned no citation metadata. "
+            "The generated explanations contain no accepted news evidence. Use an endpoint "
+            "that returns Web Search sources or URL citations."
+        ),
         "OpenAIError": "The LLM client configuration is invalid. Check the key and API URL.",
         "TypeError": "The LLM client configuration or structured response is invalid.",
         "ValueError": "The LLM client configuration or structured response is invalid.",
@@ -316,7 +321,14 @@ if page == "Overview":
                     completed = run_daily(run_settings, offline=offline, refresh=True)
                 problem = llm_error_message(completed.health)
                 if problem:
-                    notice = {"level": "error", "message": problem}
+                    notice = {
+                        "level": (
+                            "warning"
+                            if completed.health.get("research") == "NO_VERIFIABLE_SOURCES"
+                            else "error"
+                        ),
+                        "message": problem,
+                    }
                 elif not offline and research_enabled:
                     calls = completed.telemetry.get("llm_calls", 0)
                     searches = completed.telemetry.get("web_searches", 0)

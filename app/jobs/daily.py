@@ -224,12 +224,14 @@ def run_daily(
         health["macro"] = macro_errors or ("OK" if macro["CN"]["sources"] else "MISSING")
         stage("macro", "PARTIAL" if macro_errors else "OK")
         research_errors = []
+        accepted_research_articles = 0
         if not offline and settings.research_enabled:
             try:
                 researcher = researcher or ResearchClient(settings)
                 for query in build_queries(universe, settings.max_research_queries):
                     try:
                         articles = researcher.research(query, [i.symbol for i in universe], now)
+                        accepted_research_articles += len(articles)
                         with session.begin_nested():
                             store_articles(session, articles, now)
                     except Exception as exc:
@@ -239,7 +241,9 @@ def run_daily(
                             break
             except Exception as exc:
                 research_errors.append(type(exc).__name__)
-            health["research"] = research_errors or "OK"
+            health["research"] = research_errors or (
+                "OK" if accepted_research_articles else "NO_VERIFIABLE_SOURCES"
+            )
         else:
             health["research"] = "DISABLED"
         stage("research", str(health["research"]))

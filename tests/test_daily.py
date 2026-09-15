@@ -53,6 +53,10 @@ def test_provider_failure_keeps_report(session, tmp_path):
         ),
     )
     session.commit()
-    run = run_daily(Settings(report_dir=tmp_path), provider=BrokenProvider(), session=session)
+    run = run_daily(
+        Settings(report_dir=tmp_path, research_enabled=False),
+        provider=BrokenProvider(),
+        session=session,
+    )
     assert run.status == "PARTIAL" and "private token" not in str(run.health)
     assert "TimeoutError" in run.report

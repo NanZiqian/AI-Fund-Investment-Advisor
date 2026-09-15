@@ -31,6 +31,21 @@ from app.signals import calculate_signals, portfolio_fit
 
 logger = logging.getLogger(__name__)
 
+LLM_REQUEST_ERRORS = {
+    "APIConnectionError",
+    "APIStatusError",
+    "APITimeoutError",
+    "AuthenticationError",
+    "BadRequestError",
+    "InternalServerError",
+    "NotFoundError",
+    "OpenAIError",
+    "PermissionDeniedError",
+    "RateLimitError",
+    "TypeError",
+    "ValueError",
+}
+
 
 def valued_portfolio(session, histories):
     view = portfolio_view(session)
@@ -217,7 +232,10 @@ def run_daily(
                         with session.begin_nested():
                             store_articles(session, articles, now)
                     except Exception as exc:
-                        research_errors.append(type(exc).__name__)
+                        error_name = type(exc).__name__
+                        research_errors.append(error_name)
+                        if error_name in LLM_REQUEST_ERRORS:
+                            break
             except Exception as exc:
                 research_errors.append(type(exc).__name__)
             health["research"] = research_errors or "OK"
@@ -269,9 +287,7 @@ def run_daily(
                 news_score=ev["score"],
                 macro_score=equity_macro_score(
                     macro[
-                        "US"
-                        if i.category.casefold() in {"us broad market", "us equity"}
-                        else "CN"
+                        "US" if i.category.casefold() in {"us broad market", "us equity"} else "CN"
                     ]
                 ),
                 profile=profile,
@@ -335,8 +351,9 @@ def run_daily(
                 )
             )
         ]
-        health["llm"] = "DISABLED"
-        if researcher and settings.research_enabled and not offline:
+        request_failed = any(error in LLM_REQUEST_ERRORS for error in research_errors)
+        health["llm"] = "SKIPPED_RESEARCH_ERROR" if request_failed else "DISABLED"
+        if researcher and settings.research_enabled and not offline and not request_failed:
             try:
                 recommendations = explain(researcher, recommendations, macro, evidence)
                 health["llm"] = "OK"

@@ -343,12 +343,15 @@ The local Streamlit dashboard provides:
 - Outcome evaluation.
 - Data health.
 - Settings and verified fund-profile editing.
+- Secure LLM key, base-URL, model, and enable/disable controls in the daily-run panel.
 
-The dashboard does not display secrets. It must explain WATCH, unknown data, revision semantics, and the difference between research return and transaction return.
+The dashboard does not display stored secrets. API-key input uses a password field and persists only to the ignored local `.env` file when the user selects Save. It must explain WATCH, unknown data, revision semantics, and the difference between research return and transaction return.
 
 ## 20. Failure and freshness behavior
 
 Each provider or optional module can fail independently. Market, quantitative, portfolio, and risk stages should continue when news or notification services fail. No failure path may invent data.
+
+The dashboard must distinguish disabled research from API failure. It reports authentication, permission, endpoint, model, capability, connection, timeout, quota, and provider failures without exposing credentials. A hard LLM request failure stops repeated LLM attempts in the same run.
 
 Every run records stage health. The final status is:
 

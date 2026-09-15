@@ -47,9 +47,7 @@ def test_provider_failure_keeps_report(session, tmp_path):
         session,
         PortfolioImport(
             positions=[
-                PositionInput(
-                    symbol="012885", name="Solar Fund A", market_value=1, source="test"
-                )
+                PositionInput(symbol="012885", name="Solar Fund A", market_value=1, source="test")
             ],
             source="test",
         ),

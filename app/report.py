@@ -86,10 +86,7 @@ def daily_report(now, portfolio, risk, macro, recommendations, evidence, health)
             "Invalidation conditions: " + "; ".join(map(text, r["invalidation_conditions"])),
             "",
             "Evidence: "
-            + (
-                ", ".join(f"[{e}]" for e in r["evidence_ids"])
-                or "No qualifying news evidence"
-            ),
+            + (", ".join(f"[{e}]" for e in r["evidence_ids"]) or "No qualifying news evidence"),
             "",
         ]
     lines += ["## Material News and Evidence", ""]

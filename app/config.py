@@ -1,9 +1,63 @@
+import json
 from decimal import Decimal
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+LLM_ENV_KEYS = frozenset(
+    {
+        "OPENAI_API_KEY",
+        "OPENAI_BASE_URL",
+        "LLM_FAST_MODEL",
+        "LLM_REASONING_MODEL",
+        "LLM_REVIEW_MODEL",
+        "RESEARCH_ENABLED",
+    }
+)
+
+
+def save_env_values(path, values, template=Path(".env.example")):
+    """Update an env file without reading secrets back into the UI or logs."""
+    path = Path(path)
+    unknown = set(values) - LLM_ENV_KEYS
+    if unknown:
+        raise ValueError(f"Unsupported environment keys: {', '.join(sorted(unknown))}")
+    normalized = {}
+    for key, value in values.items():
+        value = str(value)
+        if "\n" in value or "\r" in value:
+            raise ValueError(f"{key} cannot contain a newline")
+        normalized[key] = value
+
+    source = path if path.exists() else Path(template)
+    lines = source.read_text(encoding="utf-8").splitlines() if source.exists() else []
+    written = set()
+    result = []
+    for line in lines:
+        is_setting = "=" in line and not line.lstrip().startswith("#")
+        key = line.split("=", 1)[0].strip() if is_setting else ""
+        if key in normalized:
+            value = normalized[key]
+            encoded = "" if value == "" else json.dumps(value)
+            result.append(f"{key}={encoded}")
+            written.add(key)
+        else:
+            result.append(line)
+    for key in normalized.keys() - written:
+        value = normalized[key]
+        encoded = "" if value == "" else json.dumps(value)
+        result.append(f"{key}={encoded}")
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f"{path.name}.tmp")
+    try:
+        temporary.write_text("\n".join(result) + "\n", encoding="utf-8")
+        temporary.replace(path)
+    finally:
+        if temporary.exists():
+            temporary.unlink()
 
 
 class Settings(BaseSettings):

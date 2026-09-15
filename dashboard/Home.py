@@ -9,9 +9,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import pandas as pd
 import streamlit as st
+from pydantic import SecretStr
 from sqlalchemy import select
 
-from app.config import Settings
+from app.config import Settings, save_env_values
 from app.db import session_factory
 from app.db.models import DailyRun, Instrument, Recommendation
 from app.jobs.daily import run_daily
@@ -106,8 +107,51 @@ def recommendation_table(items):
     )
 
 
+def llm_error_message(health):
+    values = []
+    for key in ("research", "llm"):
+        value = health.get(key)
+        values.extend(value if isinstance(value, list) else [value])
+    errors = {str(value) for value in values if value}
+    messages = {
+        "AuthenticationError": "LLM authentication failed. Check the API key.",
+        "PermissionDeniedError": (
+            "The API account denied this request. Check project permissions and model access."
+        ),
+        "NotFoundError": (
+            "The API endpoint or model was not found. Check the API URL and model IDs."
+        ),
+        "BadRequestError": (
+            "The API rejected the request. Confirm that the endpoint and models support the "
+            "Responses API, structured parsing, and Web Search."
+        ),
+        "APIConnectionError": (
+            "Could not connect to the LLM API. Check the API URL, internet connection, proxy, "
+            "and TLS settings."
+        ),
+        "APIStatusError": (
+            "The LLM provider returned an unexpected API status. Check the endpoint and account."
+        ),
+        "APITimeoutError": "The LLM API timed out. Check the endpoint and try again.",
+        "RateLimitError": "The LLM API rate limit or account quota was reached.",
+        "InternalServerError": "The LLM provider returned a server error. Try again later.",
+        "OpenAIError": "The LLM client configuration is invalid. Check the key and API URL.",
+        "TypeError": "The LLM client configuration or structured response is invalid.",
+        "ValueError": "The LLM client configuration or structured response is invalid.",
+    }
+    for error_name, message in messages.items():
+        if error_name in errors:
+            return message
+    if any(value not in {"OK", "DISABLED"} for value in errors):
+        return f"LLM research did not complete. Recorded status: {', '.join(sorted(errors))}."
+    return None
+
+
 if page == "Overview":
     st.caption("Start with holdings and evidence so every investment judgment remains auditable.")
+    notice = st.session_state.pop("daily_notice", None)
+    if notice:
+        getattr(st, notice["level"])(notice["message"])
     display = (
         latest.inputs.get("portfolio", portfolio)
         if latest and latest.inputs.get("portfolio_import") == portfolio
@@ -163,14 +207,144 @@ if page == "Overview":
     st.dataframe(recommendation_table([r.payload for r in recs]), hide_index=True, width="stretch")
     with st.expander("Run Daily Analysis"):
         offline = st.checkbox("Use local data only (offline)", value=True)
+        st.markdown("#### LLM research configuration")
+        configured_key = settings.openai_api_key.get_secret_value()
         st.caption(
-            "Online mode refreshes fund NAV data. The research module calls an LLM only when "
-            "enabled in the local .env file."
+            f"Saved API key: {'configured' if configured_key else 'not configured'}. "
+            "The saved key is never displayed. Values entered here are used for this run; "
+            "select Save to persist them in the ignored local .env file."
         )
-        if st.button("Generate New Research Briefing", type="primary"):
+        research_enabled = st.checkbox(
+            "Enable LLM news research and explanations",
+            value=settings.research_enabled,
+            key="run_research_enabled",
+        )
+        api_key_input = st.text_input(
+            "API key",
+            value="",
+            type="password",
+            placeholder="Enter a replacement key" if configured_key else "Enter an API key",
+            key="run_openai_api_key",
+        )
+        clear_api_key = st.checkbox("Clear the saved API key", key="run_clear_api_key")
+        api_base_url = st.text_input(
+            "API base URL (blank uses the OpenAI default)",
+            value=settings.openai_base_url,
+            key="run_openai_base_url",
+        )
+        model_columns = st.columns(3)
+        fast_model = model_columns[0].text_input(
+            "Research model",
+            value=settings.llm_fast_model,
+            key="run_llm_fast_model",
+        )
+        reasoning_model = model_columns[1].text_input(
+            "Explanation model",
+            value=settings.llm_reasoning_model,
+            key="run_llm_reasoning_model",
+        )
+        review_model = model_columns[2].text_input(
+            "Review model (optional)",
+            value=settings.llm_review_model,
+            key="run_llm_review_model",
+        )
+        if offline:
+            st.info("Offline mode always makes zero market-data and LLM API calls.")
+        elif not research_enabled:
+            st.warning(
+                "Online mode will update Eastmoney NAV data, but it will make zero LLM calls "
+                "until LLM research is enabled."
+            )
+
+        save_config, run_briefing = st.columns(2)
+        if save_config.button("Save LLM Configuration"):
+            updates = {
+                "OPENAI_BASE_URL": api_base_url.strip(),
+                "LLM_FAST_MODEL": fast_model.strip(),
+                "LLM_REASONING_MODEL": reasoning_model.strip(),
+                "LLM_REVIEW_MODEL": review_model.strip(),
+                "RESEARCH_ENABLED": str(research_enabled).lower(),
+            }
+            if clear_api_key:
+                updates["OPENAI_API_KEY"] = ""
+            elif api_key_input.strip():
+                updates["OPENAI_API_KEY"] = api_key_input.strip()
+            try:
+                save_env_values(Path(".env"), updates)
+                st.session_state["daily_notice"] = {
+                    "level": "success",
+                    "message": "LLM configuration saved locally in .env.",
+                }
+                st.rerun()
+            except Exception as exc:
+                st.error(f"Configuration was not saved: {type(exc).__name__}.")
+
+        effective_key = "" if clear_api_key else api_key_input.strip() or configured_key
+        run_settings = settings.model_copy(
+            update={
+                "openai_api_key": SecretStr(effective_key),
+                "openai_base_url": api_base_url.strip(),
+                "llm_fast_model": fast_model.strip(),
+                "llm_reasoning_model": reasoning_model.strip(),
+                "llm_review_model": review_model.strip(),
+                "research_enabled": research_enabled,
+            }
+        )
+        if run_briefing.button("Generate New Research Briefing", type="primary"):
+            missing = []
+            if not offline and research_enabled:
+                if not effective_key:
+                    missing.append("API key")
+                if not fast_model.strip():
+                    missing.append("research model")
+                if not reasoning_model.strip():
+                    missing.append("explanation model")
+            if missing:
+                st.error(
+                    "LLM research is enabled, but the following settings are missing: "
+                    + ", ".join(missing)
+                    + ". Enter them above or disable LLM research."
+                )
+                st.stop()
             try:
                 with st.spinner("Updating data and applying risk controls…"):
-                    run_daily(settings, offline=offline, refresh=True)
+                    completed = run_daily(run_settings, offline=offline, refresh=True)
+                problem = llm_error_message(completed.health)
+                if problem:
+                    notice = {"level": "error", "message": problem}
+                elif not offline and research_enabled:
+                    calls = completed.telemetry.get("llm_calls", 0)
+                    searches = completed.telemetry.get("web_searches", 0)
+                    if calls:
+                        notice = {
+                            "level": "success",
+                            "message": (
+                                f"Briefing generated with {calls} LLM call(s) and "
+                                f"{searches} Web Search call(s)."
+                            ),
+                        }
+                    else:
+                        notice = {
+                            "level": "warning",
+                            "message": (
+                                "LLM research was enabled but no LLM call was recorded. "
+                                "Inspect Data Health and the model configuration."
+                            ),
+                        }
+                elif offline:
+                    notice = {
+                        "level": "success",
+                        "message": "Offline quantitative briefing generated with no API calls.",
+                    }
+                else:
+                    notice = {
+                        "level": "success",
+                        "message": (
+                            "Online quantitative briefing generated. Eastmoney NAV data was "
+                            "updated; LLM research was disabled."
+                        ),
+                    }
+                st.session_state["daily_notice"] = notice
                 st.rerun()
             except Exception as exc:
                 st.error(f"Run failed: {type(exc).__name__}. See Data Health.")

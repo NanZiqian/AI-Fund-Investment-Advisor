@@ -26,10 +26,15 @@ Open [http://127.0.0.1:8501](http://127.0.0.1:8501). When finished, press `Ctrl+
 In the dashboard:
 
 1. Open **Portfolio** and verify fund codes, A/C share classes, amounts, cash, and timestamp.
-2. Open **Overview**, expand **Run Daily Analysis**, and clear **Use local data only (offline)** when you want current NAV data and news research.
-3. Select **Generate New Research Briefing**.
-4. Read **Data Health** first, then **Daily Briefing**.
-5. Confirm fund-manager and sales-platform rules before making any manual transaction.
+2. Open **Overview** and expand **Run Daily Analysis**.
+3. Clear **Use local data only (offline)** when you want current NAV data.
+4. Enable **LLM news research and explanations** when you also want API-based news research.
+5. Enter or replace the API key, API base URL, and model IDs directly in this panel. The entered values apply immediately to the next run. Select **Save LLM Configuration** to persist them in the ignored local `.env` file.
+6. Select **Generate New Research Briefing**.
+7. Read **Data Health** first, then **Daily Briefing**.
+8. Confirm fund-manager and sales-platform rules before making any manual transaction.
+
+Clearing offline mode does not enable the LLM by itself. It permits network requests and refreshes Eastmoney NAV data. LLM calls require the separate research checkbox, an API key, and both required model IDs.
 
 Private screenshots, holdings, databases, reports, and `.env` files are excluded by `.gitignore`.
 
@@ -95,6 +100,10 @@ RESEARCH_ENABLED=true
 ```
 
 `OPENAI_BASE_URL` is optional. Leave it blank to use the OpenAI SDK default. If you use an OpenAI-compatible provider, enter its base URL, for example `https://provider.example/v1`. That provider must support the Responses API, structured parsing, and the `web_search` built-in tool used by this project. A provider that implements only Chat Completions will not run the full research pipeline.
+
+The **Run Daily Analysis** panel never displays a saved key. A blank API-key field keeps the current saved key, entering a value replaces it for the current run, and **Clear the saved API key** removes it when you save. Saving writes the key as plain text in the local `.env` file, which is excluded from Git; protect access to your Windows account and project folder. Shell environment variables take precedence over `.env`; remove an old `OPENAI_API_KEY` or `OPENAI_BASE_URL` from the shell if it overrides the value you saved.
+
+Before an enabled LLM run starts, the dashboard blocks missing API keys or required model IDs. After the run it reports authentication, permission, endpoint/model-not-found, unsupported-request, connection, timeout, rate-limit, and provider-server errors with an actionable message. A hard API failure stops additional LLM attempts for that run while retaining the quantitative result.
 
 The implementation uses the OpenAI Responses API with structured outputs and Web Search. See the official [Responses API reference](https://developers.openai.com/api/reference/resources/responses/methods/create) and [Web Search guide](https://developers.openai.com/api/docs/guides/tools-web-search).
 
